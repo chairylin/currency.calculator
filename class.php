@@ -10,8 +10,8 @@ if(!class_exists('CurrencyCalculator')) {
 
         private $id_list_currency;
         private $id_exchange_rates;
-		private $list_currency;
-		private $exchange_rates;
+	private $list_currency;
+	private $exchange_rates;
 
         function __construct($component = null)
         {
@@ -19,7 +19,7 @@ if(!class_exists('CurrencyCalculator')) {
         }
 
         function getEntityDataClass($HlBlockId)
-		{
+	{
             if (empty($HlBlockId) || $HlBlockId < 1)
             {
                 return false;
@@ -30,23 +30,23 @@ if(!class_exists('CurrencyCalculator')) {
             return $entity_data_class;
         }
 		
-		function getBlockTableList ()
-		{
-			$dbItems = HL\HighloadBlockTable::getList();
+	function getBlockTableList ()
+	{
+	    $dbItems = HL\HighloadBlockTable::getList();
             $list = [];
 
             while($arRes = $dbItems->fetch()){
                 $list[$arRes["NAME"]] = $arRes["ID"];
             }
 			
-			return $list;
-		}
+	    return $list;
+	}
 		
-		function getIdHighloadblock()
-		{
-			$list = $this->getBlockTableList();
+	function getIdHighloadblock()
+	{
+	    $list = $this->getBlockTableList();
 			
-			if ( isset($list["ListCurrency"]) ) {
+	    if ( isset($list["ListCurrency"]) ) {
                 $this->id_list_currency = $list["ListCurrency"];
             } else {
                 $this->id_list_currency = $this->createListCurrency();
@@ -57,68 +57,69 @@ if(!class_exists('CurrencyCalculator')) {
             } else {
                 $this->id_exchange_rates = $this->createExchangeRates();
             }
-		}
+	}
 		
-		function cbrXMLDailyRu()
-		{
-			return json_decode(file_get_contents('https://www.cbr-xml-daily.ru/daily_json.js'), true);
-		}
+	function cbrXMLDailyRu()
+	{
+	    return json_decode(file_get_contents('https://www.cbr-xml-daily.ru/daily_json.js'), true);
+	}
 		
-		function setRates()
-		{
-			$ar_rates = $this->cbrXMLDailyRu();
-			$date = date('d.m.Y');
-			$entity_data_class = $this->getEntityDataClass($this->id_exchange_rates);
-			
-			foreach($this->list_currency as $value){
-				
-				$car_rate = $ar_rates["Valute"][$value["UF_SHORT_NAME"]]["Value"]??1;
-				
-				$this->exchange_rates[$value["UF_SHORT_NAME"]] = [
-					'UF_VALUE' => $car_rate,
-				];
-				
-				$entity_data_class::add([
-					'UF_CURRENCY_ID' => $value["ID"],
-					'UF_VALUE' => $car_rate,
-					'UF_DATE' => $date,
-				]);
-			}
-		}
+	function setRates()
+	{
+	    $ar_rates = $this->cbrXMLDailyRu();
+	    $date = date('d.m.Y');
+	    $entity_data_class = $this->getEntityDataClass($this->id_exchange_rates);
+
+	    foreach($this->list_currency as $value){
+
+	        $car_rate = $ar_rates["Valute"][$value["UF_SHORT_NAME"]]["Value"]??1;
+
+	        $this->exchange_rates[$value["UF_SHORT_NAME"]] = [
+		    'UF_VALUE' => $car_rate,
+	        ];
+
+	        $entity_data_class::add([
+		    'UF_CURRENCY_ID' => $value["ID"],
+		    'UF_VALUE' => $car_rate,
+		    'UF_DATE' => $date,
+	        ]);
+	    }
+	}
 		
-		function getRates()
-		{
-			$entity_data_class = $this->getEntityDataClass($this->id_exchange_rates);
+	function getRates()
+	{
+	    $entity_data_class = $this->getEntityDataClass($this->id_exchange_rates);
             $rsData = $entity_data_class::getList([
-			   "select" => array("UF_CURRENCY_ID", "UF_VALUE"),
-			   "order" => array("ID" => "ASC"),
-			   "filter" => array("UF_DATE"=>date('d.m.Y'))  // Задаем параметры фильтра выборки
-			]);
+	       "select" => array("UF_CURRENCY_ID", "UF_VALUE"),
+	       "order" => array("ID" => "ASC"),
+	       "filter" => array("UF_DATE"=>date('d.m.Y'))  // Задаем параметры фильтра выборки
+	    ]);
 			
-			while($arData = $rsData->Fetch()){
-				$this->exchange_rates[$this->list_currency[$arData["UF_CURRENCY_ID"]]["UF_SHORT_NAME"]]["UF_VALUE"] = $arData["UF_VALUE"];
-			}
-			
-			if (empty($this->exchange_rates)) {
-				$this->setRates();
-			}
-			
-			return true;
-		}
+	    while($arData = $rsData->Fetch()){
+	        $this->exchange_rates[$this->list_currency[$arData["UF_CURRENCY_ID"]]["UF_SHORT_NAME"]]["UF_VALUE"] = $arData["UF_VALUE"];
+	    }
 		
-		function getCurrency()
-		{
-			$entity_data_class = $this->getEntityDataClass($this->id_list_currency);
-            $rsData = $entity_data_class::getList([
-			   "select" => array("*")
-			]);
+	    if (empty($this->exchange_rates)) {
+	        $this->setRates();
+	    }
 			
-			while($arData = $rsData->Fetch()){
-				$this->list_currency[$arData["ID"]] = $arData;
-				$currency .= '{name:"'.$arData['UF_SHORT_NAME'].'", desc:"'.$arData['UF_CURRENCY_NAME'].'"},';
-			}
-			$this->arResult["LIST_CURRENCY"] = '['.$currency.']';
-		}
+	    return true;
+	}
+		
+	function getCurrency()
+	{
+	    $entity_data_class = $this->getEntityDataClass($this->id_list_currency);
+            $rsData = $entity_data_class::getList([
+	       "select" => array("*")
+	    ]);
+			
+	    while($arData = $rsData->Fetch()){
+	        $this->list_currency[$arData["ID"]] = $arData;
+	        $currency .= '{name:"'.$arData['UF_SHORT_NAME'].'", desc:"'.$arData['UF_CURRENCY_NAME'].'"},';
+	    }
+		
+	    $this->arResult["LIST_CURRENCY"] = '['.$currency.']';
+	}
 		
 
         function createListCurrency()
@@ -275,16 +276,14 @@ if(!class_exists('CurrencyCalculator')) {
 
         public function executeComponent()
         {
-			if ($this->StartResultCache(false, date('d.m.Y')))
-			{
-				$this->getIdHighloadblock();
-				$this->getCurrency();
-				$this->getRates();
-				$this->arResult["EXCHANGE_RATES"] = $this->exchange_rates;
-				$this->includeComponentTemplate(); 
-			}
-			
+	    if ($this->StartResultCache(false, date('d.m.Y')))
+	    {
+	        $this->getIdHighloadblock();
+	        $this->getCurrency();
+	        $this->getRates();
+	        $this->arResult["EXCHANGE_RATES"] = $this->exchange_rates;
+	        $this->includeComponentTemplate(); 
+	    }		
         }
     }
-
 }
